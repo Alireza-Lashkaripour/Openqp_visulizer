@@ -28,7 +28,7 @@ class JobManager:
                 "--rm",
                 "-v", f"{input_dir}:/data",
                 "-w", "/data",
-                "openqp:fixed",  
+                "alireza0027/openqp:fixed",  
                 "/usr/local/bin/openqp",  
                 input_filename
             ]
