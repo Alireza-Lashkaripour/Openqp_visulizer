@@ -27,11 +27,6 @@ This application provides an easy-to-use GUI for **OpenQP** to set up molecular 
    docker pull alireza0027/openqp:fixed
    ```
 
-3. **Build the Docker Image Locally (Optional)**:
-   If you prefer to build it yourself, ensure you’re in the correct directory with the Dockerfile and run:
-   ```bash
-   docker build -t openqp:fixed .
-   ```
 
 ## Running the Application
 
