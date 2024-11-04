@@ -1,91 +1,253 @@
-# results_viewer.py
-
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 import os
 import webbrowser
-import py3Dmol
+from pathlib import Path
+import tempfile
 
 class ResultsViewer:
     def __init__(self, parent):
+        """Initialize the ResultsViewer with a parent window."""
         self.parent = parent
+        self.temp_files = []  
+        
+    def __del__(self):
+        """Cleanup temporary files when the object is destroyed."""
+        for temp_file in self.temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except Exception as e:
+                print(f"Error cleaning up temporary file {temp_file}: {e}")
 
     def show_results(self):
         """Main function to display options for viewing results."""
         results_window = tk.Toplevel(self.parent)
         results_window.title("Results Viewer")
-
-        # Buttons for Log File and Molecular Orbital Visualization
-        tk.Button(results_window, text="Open Log File", command=self.open_log_file).pack(pady=5)
-        tk.Button(results_window, text="Visualize Molecular Orbitals", command=self.visualize_molecular_orbitals).pack(pady=5)
+        results_window.geometry("300x200")  
+        
+        frame = tk.Frame(results_window, padx=20, pady=20)
+        frame.pack(expand=True, fill='both')
+        
+        tk.Label(frame, text="Select an option to view results:", 
+                font=('Arial', 10, 'bold')).pack(pady=(0, 10))
+        
+        tk.Button(frame, text="Open Log File", 
+                 command=self.open_log_file,
+                 width=25, 
+                 relief=tk.GROOVE).pack(pady=5)
+                 
+        tk.Button(frame, text="Visualize Molecular Orbitals",
+                 command=self.visualize_molecular_orbitals,
+                 width=25,
+                 relief=tk.GROOVE).pack(pady=5)
 
     def open_log_file(self):
         """Open and display the contents of a selected log file."""
-        log_file_path = filedialog.askopenfilename(filetypes=[("Log files", "*.log")])
-        
-        if not log_file_path or not os.path.exists(log_file_path):
-            messagebox.showwarning("Warning", "Log file not found.")
-            return
+        try:
+            log_file_path = filedialog.askopenfilename(
+                title="Select Log File",
+                filetypes=[("Log files", "*.log"), ("All files", "*.*")]
+            )
+            
+            if not log_file_path:  
+                return
+                
+            if not os.path.exists(log_file_path):
+                messagebox.showwarning("Warning", "Selected file does not exist.")
+                return
 
-        log_window = tk.Toplevel(self.parent)
-        log_window.title("Log File Viewer")
+            log_window = tk.Toplevel(self.parent)
+            log_window.title(f"Log File Viewer - {Path(log_file_path).name}")
+            log_window.geometry("800x600")
 
-        log_text = scrolledtext.ScrolledText(log_window, wrap="word", width=80, height=20)
-        log_text.pack(padx=10, pady=10, expand=True, fill="both")
+            menubar = tk.Menu(log_window)
+            file_menu = tk.Menu(menubar, tearoff=0)
+            file_menu.add_command(label="Save As...", 
+                                command=lambda: self.save_log_content(log_text))
+            menubar.add_cascade(label="File", menu=file_menu)
+            log_window.config(menu=menubar)
 
-        with open(log_file_path, 'r') as log_file:
-            log_text.insert(tk.END, log_file.read())
+            frame = tk.Frame(log_window)
+            frame.pack(fill='both', expand=True, padx=5, pady=5)
+
+            search_frame = tk.Frame(frame)
+            search_frame.pack(fill='x', padx=5, pady=(0, 5))
+            
+            tk.Label(search_frame, text="Search:").pack(side='left')
+            search_var = tk.StringVar()
+            search_entry = tk.Entry(search_frame, textvariable=search_var)
+            search_entry.pack(side='left', padx=5)
+            
+            tk.Button(search_frame, text="Find",
+                     command=lambda: self.search_text(log_text, search_var.get())
+                     ).pack(side='left')
+
+            log_text = scrolledtext.ScrolledText(
+                frame, 
+                wrap=tk.WORD, 
+                width=80, 
+                height=20,
+                font=('Courier', 10)
+            )
+            log_text.pack(expand=True, fill='both')
+
+            try:
+                with open(log_file_path, 'r', encoding='utf-8') as log_file:
+                    log_text.insert(tk.END, log_file.read())
+                log_text.config(state='disabled')  
+            except UnicodeDecodeError:
+                with open(log_file_path, 'r', encoding='latin-1') as log_file:
+                    log_text.insert(tk.END, log_file.read())
+                log_text.config(state='disabled')
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open log file: {str(e)}")
+
+    def save_log_content(self, text_widget):
+        """Save the content of the text widget to a file."""
+        try:
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(text_widget.get(1.0, tk.END))
+                messagebox.showinfo("Success", "File saved successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save file: {str(e)}")
+
+    def search_text(self, text_widget, search_string):
+        """Search for text in the text widget and highlight matches."""
+        text_widget.tag_remove('search', '1.0', tk.END)
+        if search_string:
+            pos = '1.0'
+            while True:
+                pos = text_widget.search(search_string, pos, tk.END, nocase=True)
+                if not pos:
+                    break
+                end_pos = f"{pos}+{len(search_string)}c"
+                text_widget.tag_add('search', pos, end_pos)
+                pos = end_pos
+            text_widget.tag_config('search', background='yellow')
 
     def visualize_molecular_orbitals(self):
-        """Visualize molecular orbitals using a Cube file generated from the Molden data."""
-        # Select XYZ file for structure and Cube file for MO data
-        xyz_file_path = filedialog.askopenfilename(filetypes=[("XYZ files", "*.xyz")])
-        cube_file_path = filedialog.askopenfilename(filetypes=[("Cube files", "*.cube")])
+        """Visualize molecular orbitals using atomic data from the Molden file."""
+        try:
+            molden_file_path = filedialog.askopenfilename(
+                title="Select Molden File",
+                filetypes=[("Molden files", "*.molden"), ("All files", "*.*")]
+            )
+            
+            if not molden_file_path:  
+                return
+                
+            if not os.path.exists(molden_file_path):
+                messagebox.showwarning("Warning", "Selected file does not exist.")
+                return
 
-        if not xyz_file_path or not os.path.exists(xyz_file_path):
-            messagebox.showwarning("Warning", "XYZ file not found.")
-            return
-        if not cube_file_path or not os.path.exists(cube_file_path):
-            messagebox.showwarning("Warning", "Cube file not found.")
-            return
+            xyz_data = self.parse_molden_file(molden_file_path)
+            if not xyz_data:
+                messagebox.showerror("Error", "No atomic coordinates found in the Molden file.")
+                return
 
-        # Load XYZ data for molecular structure
-        with open(xyz_file_path, 'r') as xyz_file:
-            xyz_data = xyz_file.read()
+            html_content = self.create_visualization_html(xyz_data)
 
-        # Load Cube data for MO visualization
-        with open(cube_file_path, 'r') as cube_file:
-            cube_data = cube_file.read()
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix='.html',
+                delete=False,
+                encoding='utf-8'
+            ) as temp_file:
+                temp_file.write(html_content)
+                self.temp_files.append(temp_file.name)
+                
+            webbrowser.open(f"file://{temp_file.name}")
 
-        # Set up Py3Dmol viewer in a new window
-        viewer_window = tk.Toplevel(self.parent)
-        viewer_window.title("Molecular Orbital Visualization")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to visualize molecular orbitals: {str(e)}")
 
-        html_content = f"""
+    def parse_molden_file(self, molden_file_path):
+        """Parse atomic coordinates from the Molden file."""
+        try:
+            xyz_data = []
+            with open(molden_file_path, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+
+            reading_atoms = False
+            for line in lines:
+                if "[Atoms]" in line:
+                    reading_atoms = True
+                    continue
+                if reading_atoms:
+                    if line.strip() == "" or "[" in line:
+                        break
+                    try:
+                        parts = line.split()
+                        if len(parts) >= 5:  
+                            element = parts[0]
+                            x, y, z = map(float, parts[2:5])  
+                            xyz_data.append(f"{element} {x:.6f} {y:.6f} {z:.6f}")
+                    except (ValueError, IndexError):
+                        continue  
+
+            if not xyz_data:
+                return None
+
+            return f"{len(xyz_data)}\nMolecule\n" + "\n".join(xyz_data)
+
+        except Exception as e:
+            print(f"Error parsing Molden file: {e}")
+            return None
+
+    def create_visualization_html(self, xyz_data):
+        """Create HTML content for molecular visualization."""
+        return f"""
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
+            <title>Molecular Orbital Visualization</title>
             <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+            <style>
+                body {{ margin: 0; padding: 0; }}
+                #viewer {{ width: 100vw; height: 100vh; }}
+                #controls {{ 
+                    position: absolute; 
+                    top: 10px; 
+                    left: 10px;
+                    background: rgba(255, 255, 255, 0.8);
+                    padding: 10px;
+                    border-radius: 5px;
+                }}
+            </style>
         </head>
         <body>
-            <div id="viewer" style="width: 100%; height: 100vh;"></div>
+            <div id="viewer"></div>
+            <div id="controls">
+                <button onclick="setStyle('stick')">Stick</button>
+                <button onclick="setStyle('sphere')">Ball</button>
+                <button onclick="setStyle('cartoon')">Cartoon</button>
+                <button onclick="viewer.center()">Center</button>
+            </div>
             <script>
-                const viewer = $3Dmol.createViewer("viewer", {{backgroundColor: "white"}});
+                let viewer = $3Dmol.createViewer(document.getElementById("viewer"), {{
+                    backgroundColor: "white"
+                }});
+                
                 viewer.addModel(`{xyz_data}`, "xyz");
                 viewer.setStyle({{"stick":{{}}}});
-                viewer.addVolumetricData(`{cube_data}`, "cube", {{isoval: 0.02, color: "blue"}});
                 viewer.zoomTo();
+                
+                function setStyle(style) {{
+                    viewer.setStyle({{}});
+                    viewer.setStyle({{[style]:{{}}}});
+                    viewer.render();
+                }}
+                
                 viewer.render();
             </script>
         </body>
         </html>
         """
-
-        # Save the HTML to a temporary file and open in the default web browser
-        html_file_path = os.path.join(os.getcwd(), "molecular_orbitals_viewer.html")
-        with open(html_file_path, 'w') as html_file:
-            html_file.write(html_content)
-
-        webbrowser.open(f"file://{html_file_path}")
-

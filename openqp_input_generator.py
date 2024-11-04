@@ -1,4 +1,3 @@
-# openqp_input_generator.py
 
 import os
 import tkinter as tk

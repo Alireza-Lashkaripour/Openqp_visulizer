@@ -1,4 +1,3 @@
-# molecule_visualizer.py
 import tkinter as tk
 from tkinter import messagebox
 import os
@@ -10,7 +9,6 @@ class MoleculeVisualizer:
         """Initialize the MoleculeVisualizer with a parent window."""
         self.parent = parent
         self.file_path = None
-        # Define path to 3Dmol.js - using CDN instead of local file
         self.js_url = "https://3Dmol.org/build/3Dmol-min.js"
         
     def set_geometry_path(self, path):
@@ -72,18 +70,14 @@ class MoleculeVisualizer:
     def show(self):
         """Display the molecule structure using 3Dmol.js."""
         try:
-            # Read XYZ data
             xyz_data = self._read_xyz_file()
             
-            # Generate HTML with the visualization
             html_content = self._generate_html(xyz_data)
             
-            # Save HTML to a temporary file
             html_file_path = os.path.join(os.getcwd(), "molecule_visualization.html")
             with open(html_file_path, 'w', encoding='utf-8') as file:
                 file.write(html_content)
             
-            # Open in default browser
             webbrowser.open(f"file://{html_file_path}")
             
         except Exception as e:

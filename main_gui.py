@@ -1,4 +1,3 @@
-# main_gui.py
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, StringVar, OptionMenu
@@ -13,19 +12,16 @@ class OpenQPGUI:
         self.root = root
         self.root.title("OpenQP GUI")
         
-        # Initialize modules
         self.visualizer = MoleculeVisualizer(self.root)
         self.input_generator = OpenQPInputGenerator(self.root)
         self.job_manager = JobManager(self.root)
         self.results_viewer = ResultsViewer(self.root)
         
-        # Layout: Left and Right Panels
         left_frame = tk.Frame(self.root, padx=10, pady=10)
         right_frame = tk.Frame(self.root, padx=10, pady=10)
         left_frame.grid(row=0, column=0, sticky="nsew")
         right_frame.grid(row=0, column=1, sticky="nsew")
 
-        # Left Panel: Geometry Input and Visualization
         tk.Label(left_frame, text="Paste Geometry (XYZ format)").pack()
         self.geometry_text = scrolledtext.ScrolledText(left_frame, wrap="word", height=10, width=30)
         self.geometry_text.pack()
@@ -33,7 +29,6 @@ class OpenQPGUI:
         tk.Button(left_frame, text="Save Geometry", command=self.save_geometry).pack(pady=5)
         tk.Button(left_frame, text="Visualize Molecule", command=self.visualizer.show).pack(pady=5)
 
-        # Right Panel: Calculation and Job Management
         tk.Label(right_frame, text="Calculation Type").pack()
         self.calc_type = StringVar(value="MRSF ENERGY")
         calc_options = ["MRSF ENERGY"]
@@ -68,11 +63,9 @@ class OpenQPGUI:
                 file.write(geometry_content)
             messagebox.showinfo("Saved", f"Geometry saved as {save_path}")
 
-            # Set the saved file path in the visualizer and input generator
             self.visualizer.set_geometry_path(save_path)
             self.input_generator.set_geometry_path(save_path)
 
-            # Generate and display the input text in the GUI
             input_text = self.input_generator.generate_input_text(self.calc_type.get(), save_path)
             self.input_text.delete("1.0", tk.END)
             self.input_text.insert("1.0", input_text)
@@ -84,11 +77,9 @@ class OpenQPGUI:
             messagebox.showwarning("Warning", "Please enter a job name.")
             return
 
-        # Define the path for the input and log files
         input_file_path = self.input_generator.generate_input_file(self.input_text.get("1.0", tk.END), job_name)
         log_file_path = os.path.join(os.path.dirname(input_file_path), f"{job_name}.log")
 
-        # Start the job with the specified input and log paths
         if input_file_path:
             self.job_manager._execute_job(input_file_path, log_file_path, self.log_text)
 
