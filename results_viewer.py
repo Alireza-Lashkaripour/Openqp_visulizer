@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, StringVar, OptionMenu
 import os
 import webbrowser
 from pathlib import Path
@@ -9,8 +9,9 @@ class ResultsViewer:
     def __init__(self, parent):
         """Initialize the ResultsViewer with a parent window."""
         self.parent = parent
-        self.temp_files = []  
-        
+        self.temp_files = []
+        self.mo_data = []  # Initialize mo_data as an empty list
+
     def __del__(self):
         """Cleanup temporary files when the object is destroyed."""
         for temp_file in self.temp_files:
@@ -24,23 +25,32 @@ class ResultsViewer:
         """Main function to display options for viewing results."""
         results_window = tk.Toplevel(self.parent)
         results_window.title("Results Viewer")
-        results_window.geometry("300x200")  
-        
+        results_window.geometry("300x300")
+
         frame = tk.Frame(results_window, padx=20, pady=20)
         frame.pack(expand=True, fill='both')
-        
+
         tk.Label(frame, text="Select an option to view results:", 
-                font=('Arial', 10, 'bold')).pack(pady=(0, 10))
+                 font=('Arial', 10, 'bold')).pack(pady=(0, 10))
         
         tk.Button(frame, text="Open Log File", 
-                 command=self.open_log_file,
-                 width=25, 
-                 relief=tk.GROOVE).pack(pady=5)
-                 
-        tk.Button(frame, text="Visualize Molecular Orbitals",
-                 command=self.visualize_molecular_orbitals,
-                 width=25,
-                 relief=tk.GROOVE).pack(pady=5)
+                  command=self.open_log_file,
+                  width=25, 
+                  relief=tk.GROOVE).pack(pady=5)
+
+        tk.Label(frame, text="Choose Molecular Orbital:").pack(pady=5)
+        
+        # Ensure mo_data is populated before initializing the dropdown menu
+        if not self.mo_data:
+            self.mo_data = ["MO 1"]  # Default option if no MO data is loaded
+        
+        self.mo_var = StringVar(value="Select MO")
+        self.mo_options = [f"MO {i + 1}" for i in range(len(self.mo_data))]
+        
+        mo_menu = OptionMenu(frame, self.mo_var, *self.mo_options, command=self.visualize_selected_mo)
+        mo_menu.pack(pady=5)
+
+
 
     def open_log_file(self):
         """Open and display the contents of a selected log file."""
@@ -64,7 +74,7 @@ class ResultsViewer:
             menubar = tk.Menu(log_window)
             file_menu = tk.Menu(menubar, tearoff=0)
             file_menu.add_command(label="Save As...", 
-                                command=lambda: self.save_log_content(log_text))
+                                  command=lambda: self.save_log_content(log_text))
             menubar.add_cascade(label="File", menu=file_menu)
             log_window.config(menu=menubar)
 
@@ -80,8 +90,8 @@ class ResultsViewer:
             search_entry.pack(side='left', padx=5)
             
             tk.Button(search_frame, text="Find",
-                     command=lambda: self.search_text(log_text, search_var.get())
-                     ).pack(side='left')
+                      command=lambda: self.search_text(log_text, search_var.get())
+                      ).pack(side='left')
 
             log_text = scrolledtext.ScrolledText(
                 frame, 
@@ -132,27 +142,30 @@ class ResultsViewer:
                 pos = end_pos
             text_widget.tag_config('search', background='yellow')
 
-    def visualize_molecular_orbitals(self):
-        """Visualize molecular orbitals using atomic data from the Molden file."""
+
+    def visualize_selected_mo(self, selected_mo):
+        """Visualize the selected molecular orbital using 3Dmol.js."""
         try:
-            molden_file_path = filedialog.askopenfilename(
-                title="Select Molden File",
-                filetypes=[("Molden files", "*.molden"), ("All files", "*.*")]
-            )
-            
-            if not molden_file_path:  
-                return
-                
-            if not os.path.exists(molden_file_path):
-                messagebox.showwarning("Warning", "Selected file does not exist.")
+            # Check if molden_file_path is set; if not, prompt the user to select a file
+            if not hasattr(self, 'molden_file_path') or not self.molden_file_path:
+                molden_file_path = filedialog.askopenfilename(
+                    title="Select Molden File",
+                    filetypes=[("Molden files", "*.molden"), ("All files", "*.*")]
+                )
+                if molden_file_path:
+                    self.molden_file_path = molden_file_path
+                else:
+                    messagebox.showwarning("Warning", "No Molden file selected.")
+                    return
+
+            mo_index = int(selected_mo.split()[1]) - 1
+            xyz_data, mo_data = self.parse_molden_file(self.molden_file_path)
+
+            if not xyz_data or not mo_data:
+                messagebox.showerror("Error", "No atomic coordinates or MO data found in the Molden file.")
                 return
 
-            xyz_data = self.parse_molden_file(molden_file_path)
-            if not xyz_data:
-                messagebox.showerror("Error", "No atomic coordinates found in the Molden file.")
-                return
-
-            html_content = self.create_visualization_html(xyz_data)
+            html_content = self.create_visualization_html(xyz_data, mo_data[mo_index])
 
             with tempfile.NamedTemporaryFile(
                 mode='w',
@@ -168,41 +181,49 @@ class ResultsViewer:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to visualize molecular orbitals: {str(e)}")
 
+
+
     def parse_molden_file(self, molden_file_path):
-        """Parse atomic coordinates from the Molden file."""
+        """Parse atomic coordinates and MO data from the Molden file."""
         try:
             xyz_data = []
+            mo_data = []  # List to store molecular orbitals
             with open(molden_file_path, 'r', encoding='utf-8') as file:
                 lines = file.readlines()
 
             reading_atoms = False
+            reading_mos = False
             for line in lines:
                 if "[Atoms]" in line:
                     reading_atoms = True
+                    reading_mos = False
                     continue
+                elif "[MO]" in line:
+                    reading_atoms = False
+                    reading_mos = True
+                    continue
+                elif line.strip() == "" or "[" in line:
+                    reading_atoms = False
+                    reading_mos = False
+
                 if reading_atoms:
-                    if line.strip() == "" or "[" in line:
-                        break
-                    try:
-                        parts = line.split()
-                        if len(parts) >= 5:  
-                            element = parts[0]
-                            x, y, z = map(float, parts[2:5])  
-                            xyz_data.append(f"{element} {x:.6f} {y:.6f} {z:.6f}")
-                    except (ValueError, IndexError):
-                        continue  
+                    parts = line.split()
+                    if len(parts) >= 5:
+                        element = parts[0]
+                        x, y, z = map(float, parts[2:5])
+                        xyz_data.append(f"{element} {x:.6f} {y:.6f} {z:.6f}")
+                
+                if reading_mos:
+                    mo_data.append(line.strip())  # Collect MO lines
 
-            if not xyz_data:
-                return None
-
-            return f"{len(xyz_data)}\nMolecule\n" + "\n".join(xyz_data)
+            return xyz_data, mo_data
 
         except Exception as e:
             print(f"Error parsing Molden file: {e}")
-            return None
+            return None, None
 
-    def create_visualization_html(self, xyz_data):
-        """Create HTML content for molecular visualization."""
+    def create_visualization_html(self, xyz_data, mo_data):
+        """Create HTML content for molecular orbital visualization."""
         return f"""
         <!DOCTYPE html>
         <html lang="en">
@@ -213,24 +234,10 @@ class ResultsViewer:
             <style>
                 body {{ margin: 0; padding: 0; }}
                 #viewer {{ width: 100vw; height: 100vh; }}
-                #controls {{ 
-                    position: absolute; 
-                    top: 10px; 
-                    left: 10px;
-                    background: rgba(255, 255, 255, 0.8);
-                    padding: 10px;
-                    border-radius: 5px;
-                }}
             </style>
         </head>
         <body>
             <div id="viewer"></div>
-            <div id="controls">
-                <button onclick="setStyle('stick')">Stick</button>
-                <button onclick="setStyle('sphere')">Ball</button>
-                <button onclick="setStyle('cartoon')">Cartoon</button>
-                <button onclick="viewer.center()">Center</button>
-            </div>
             <script>
                 let viewer = $3Dmol.createViewer(document.getElementById("viewer"), {{
                     backgroundColor: "white"
@@ -238,16 +245,17 @@ class ResultsViewer:
                 
                 viewer.addModel(`{xyz_data}`, "xyz");
                 viewer.setStyle({{"stick":{{}}}});
+                
+                viewer.addSurface($3Dmol.SurfaceType.VDW, {{
+                    opacity: 0.85,
+                    colorscheme: 'orangeCarbon',
+                    voldata: {mo_data}
+                }});
+
                 viewer.zoomTo();
-                
-                function setStyle(style) {{
-                    viewer.setStyle({{}});
-                    viewer.setStyle({{[style]:{{}}}});
-                    viewer.render();
-                }}
-                
                 viewer.render();
             </script>
         </body>
         </html>
         """
+

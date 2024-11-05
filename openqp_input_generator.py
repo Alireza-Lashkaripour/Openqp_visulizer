@@ -6,11 +6,94 @@ from tkinter import filedialog, messagebox
 class OpenQPInputGenerator:
     def __init__(self, parent):
         self.parent = parent
-        self.template = """[input]
+        
+        #  templates for each calculation type
+        self.templates = {
+            "DFT Energy": """[input]
+system=water.xyz
+charge=0
+functional=bhhlyp
+basis=3-21g
+method=hf
+runtype=energy
+
+[guess]
+type=huckel
+save_mol=True
+
+[scf]
+multiplicity=1
+type=rhf
+save_molden=True
+
+""",
+            "DFT Geometry Optimization": """[input]
+system=water.xyz
+charge=0
+functional=bhhlyp
+basis=3-21g
+runtype=optimize
+method=hf
+
+[guess]
+type=huckel
+save_mol=True
+
+[scf]
+type=rhf
+multiplicity=1
+save_molden=True
+
+[optimize]
+istate=0
+""",
+            "MRSF-TDDFT Ground State Energy": """[input]
 system=water.xyz
 charge=0
 runtype=energy
-basis=6-31g(d)
+basis=3-21g
+functional=bhhlyp
+method=tdhf
+
+[guess]
+type=huckel
+save_mol=True
+
+[scf]
+multiplicity=3
+type=rohf
+save_molden=True
+
+[tdhf]
+type=mrsf
+nstate=1
+""",
+            "MRSF-TDDFT First Excited State Energy": """[input]
+system=water.xyz
+charge=0
+runtype=energy
+basis=3-21g
+functional=bhhlyp
+method=tdhf
+
+[guess]
+type=huckel
+save_mol=True
+
+[scf]
+multiplicity=3
+type=rohf
+save_molden=True
+
+[tdhf]
+type=mrsf
+nstate=2
+""",
+            "MRSF-TDDFT Ground State Geometry Optimization": """[input]
+system=water.xyz
+charge=0
+runtype=optimize
+basis=3-21g
 functional=bhhlyp
 method=tdhf
 
@@ -26,7 +109,35 @@ save_molden=True
 [tdhf]
 type=mrsf
 nstate=3
+
+[optimize]
+istate=1
+""",
+            "MRSF-TDDFT First Excited State Geometry Optimization": """[input]
+system=water.xyz
+charge=0
+runtype=optimize
+basis=3-21g
+functional=bhhlyp
+method=tdhf
+
+[guess]
+type=huckel
+save_mol=True
+
+[scf]
+multiplicity=3
+type=rohf
+save_molden=True
+
+[tdhf]
+type=mrsf
+nstate=3
+
+[optimize]
+istate=2
 """
+        }
         self.input_file_path = None
 
     def set_geometry_path(self, geometry_filename: str):
@@ -34,8 +145,9 @@ nstate=3
         self.geometry_filename = os.path.basename(geometry_filename)
         
     def generate_input_text(self, calc_type: str, geometry_filename: str):
-        """Generate the input text with the relative system path."""
-        input_content = self.template.replace("system=water.xyz", f"system={self.geometry_filename}")
+        """Generate the input text based on the selected calculation type."""
+        template = self.templates.get(calc_type, "")
+        input_content = template.replace("system=water.xyz", f"system={self.geometry_filename}")
         return input_content
 
     def generate_input_file(self, input_text: str, job_name: str):
