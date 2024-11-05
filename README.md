@@ -77,21 +77,21 @@ docker pull alireza0027/openqp:fixed
    python3 main_gui.py
    ```
 
-### Windows (PowerShell)
+### Windows (Spyder)
 
 1. **Install dependencies**:
-   ```powershell
+   ```Spyder
    python -m pip install --upgrade pip
    python -m pip install py3Dmol
    ```
 
 2. **Navigate to the project directory**:
-   ```powershell
+   ```Spyder
    cd Openqp_visulizer
    ```
 
 3. **Launch the GUI**:
-   ```powershell
+   ```Spyder
    python main_gui.py
    ```
 
@@ -190,18 +190,18 @@ docker pull alireza0027/openqp:fixed
 ### Windows (PowerShell)
 
 1. **필수 패키지 설치**:
-   ```powershell
+   ```Spyder
    python -m pip install --upgrade pip
    python -m pip install py3Dmol
    ```
 
 2. **프로젝트 디렉토리로 이동**:
-   ```powershell
+   ```Spyder
    cd Openqp_visulizer
    ```
 
 3. **GUI 실행**:
-   ```powershell
+   ```Spyder
    python main_gui.py
    ```
 
