@@ -10,7 +10,7 @@ class ResultsViewer:
         """Initialize the ResultsViewer with a parent window."""
         self.parent = parent
         self.temp_files = []
-        self.mo_data = []  # Initialize mo_data as an empty list
+        self.mo_data = []  
 
     def __del__(self):
         """Cleanup temporary files when the object is destroyed."""
@@ -40,9 +40,9 @@ class ResultsViewer:
 
         tk.Label(frame, text="Choose Molecular Orbital:").pack(pady=5)
         
-        # Ensure mo_data is populated before initializing the dropdown menu
+        
         if not self.mo_data:
-            self.mo_data = ["MO 1"]  # Default option if no MO data is loaded
+            self.mo_data = ["MO 1"]  
         
         self.mo_var = StringVar(value="Select MO")
         self.mo_options = [f"MO {i + 1}" for i in range(len(self.mo_data))]
@@ -146,7 +146,7 @@ class ResultsViewer:
     def visualize_selected_mo(self, selected_mo):
         """Visualize the selected molecular orbital using 3Dmol.js."""
         try:
-            # Check if molden_file_path is set; if not, prompt the user to select a file
+            
             if not hasattr(self, 'molden_file_path') or not self.molden_file_path:
                 molden_file_path = filedialog.askopenfilename(
                     title="Select Molden File",
@@ -187,7 +187,7 @@ class ResultsViewer:
         """Parse atomic coordinates and MO data from the Molden file."""
         try:
             xyz_data = []
-            mo_data = []  # List to store molecular orbitals
+            mo_data = []  
             with open(molden_file_path, 'r', encoding='utf-8') as file:
                 lines = file.readlines()
 
@@ -214,7 +214,7 @@ class ResultsViewer:
                         xyz_data.append(f"{element} {x:.6f} {y:.6f} {z:.6f}")
                 
                 if reading_mos:
-                    mo_data.append(line.strip())  # Collect MO lines
+                    mo_data.append(line.strip())  
 
             return xyz_data, mo_data
 
