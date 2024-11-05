@@ -28,7 +28,7 @@ visualize molecular structures, and view optimized geometries and molecular orbi
 ### 1. Clone the Repository
 Clone this repository to your local machine:
 ```bash
-git clone https://github.com/yourusername/Openqp_visulizer.git
+git clone https://github.com/Alireza-Lashkaripour/Openqp_visulizer.git
 cd Openqp_visulizer
 ```
 
@@ -138,7 +138,7 @@ docker pull alireza0027/openqp:fixed
 ### 1. 리포지토리 클론
 로컬 컴퓨터에 이 리포지토리를 클론하세요:
 ```bash
-git clone https://github.com/yourusername/Openqp_visulizer.git
+git clone https://github.com/Alireza-Lashkaripour/Openqp_visulizer.git
 cd Openqp_visulizer
 ```
 
