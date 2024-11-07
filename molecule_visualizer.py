@@ -82,4 +82,3 @@ class MoleculeVisualizer:
             
         except Exception as e:
             messagebox.showerror("Error", str(e))
-

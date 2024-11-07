@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import scrolledtext
 import subprocess
@@ -94,4 +93,3 @@ class JobManager:
                 log_widget.update_idletasks()
         except queue.Empty:
             pass
-

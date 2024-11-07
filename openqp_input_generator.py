@@ -1,4 +1,3 @@
-
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -156,4 +155,3 @@ istate=2
         with open(self.input_file_path, 'w') as file:
             file.write(input_text)
         return self.input_file_path
-

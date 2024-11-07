@@ -75,4 +75,3 @@ class GeometryExtractor:
             xyz_file.write(xyz_data)
         
         return save_path
-

@@ -243,7 +243,7 @@ class ResultsViewer:
                     backgroundColor: "white"
                 }});
                 
-                viewer.addModel(`{xyz_data}`, "xyz");
+                viewer.addModel({xyz_data}, "xyz");
                 viewer.setStyle({{"stick":{{}}}});
                 
                 viewer.addSurface($3Dmol.SurfaceType.VDW, {{
@@ -258,4 +258,3 @@ class ResultsViewer:
         </body>
         </html>
         """
-
